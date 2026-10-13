@@ -4,6 +4,10 @@ function losowaId() {
   return Math.floor(Math.random() * 300)
 }
 
+
+
+
+
 function ZdjecieDnia() {
   const [id, setId] = useState(losowaId)
   const [zdjecie, setZdjecie] = useState(null)
@@ -24,10 +28,34 @@ function ZdjecieDnia() {
         setIsLoading(false)
       }
     }
+
     pobierz()
   }, [id])
 
-  return <p>Zdjęcie dnia — tu dopiero będzie widok</p>
+  return (
+    <div className="container mt-5 mb-5">
+      <h2>Zdjęcie dnia</h2>
+
+      {zdjecie && (
+        <>
+          <img
+            src={`https://picsum.photos/id/${id}/400/250`}
+            className="img-fluid rounded"
+            alt={zdjecie.author}
+          />
+          <p className="text-muted mt-2">Autor: {zdjecie.author}</p>
+        </>
+      )}
+
+      <button
+        className="btn btn-outline-primary"
+        disabled={isLoading}
+        onClick={() => setId(losowaId())}
+      >
+        {isLoading ? 'Losuję...' : 'Losuj nowe zdjęcie'}
+      </button>
+    </div>
+  )
 }
 
 export default ZdjecieDnia
