@@ -1,68 +1,100 @@
-import React, { useState } from "react";
-
-const filmy = [
-  "Incepcja",
-  "Matrix",
-  "Skazani na Shawshank",
-  "Pulp Fiction",
-  "Forrest Gump",
-];
-
-function Pozycja({ nazwa }) {
-  return <li>{nazwa}</li>;
-}
+import { useState } from 'react'
+import Navbar from './components/Navbar.jsx'
+import CategoryBar from './components/CategoryBar.jsx'
+import Gallery from './components/Gallery.jsx'
+import AddPhotoModal from './components/AddPhotoModal.jsx'
+import FiltersOffcanvas from './components/FiltersOffcanvas.jsx'
+import Footer from './components/Footer.jsx'
+import './App.css'
 
 function App() {
-  const [imieNazwisko, ustawImieNazwisko] = useState("");
-  const [numerFilmu, ustawNumerFilmu] = useState("");
+  const [zdjecia, setZdjecia] = useState([])
+  const [aktywnaKategoria, setAktywnaKategoria] = useState('wszystkie')
 
-  function handleSubmit(zdarzenie) {
-    zdarzenie.preventDefault();
-    console.log(imieNazwisko);
+  const widoczne =
+    aktywnaKategoria === 'wszystkie'
+      ? zdjecia
+      : zdjecia.filter(z => z.category === aktywnaKategoria)
 
-    const wybranyFilm = filmy[Number(numerFilmu) - 1];
-    if (wybranyFilm) {
-      console.log(wybranyFilm);
-    } else {
-      console.log("Nieprawidłowy numer filmu");
-    }
+  function usunZdjecie(id) {
+    setZdjecia(zdjecia.filter(z => z.id !== id))
+  }
+
+  function dodajZdjecie(nowe) {
+    const noweId = Math.max(...zdjecia.map(z => z.id)) + 1
+    setZdjecia([...zdjecia, { ...nowe, id: noweId, favorite: false }])
+  }
+
+  function przelaczUlubione(id) {
+    setZdjecia(
+      zdjecia.map(z => (z.id === id ? { ...z, favorite: !z.favorite } : z))
+    )
   }
 
   return (
-    <main>
-      <h1>Liczba filmów: {filmy.length}</h1>
+    <>
+      <Navbar />
 
-      <ol>
-        {filmy.map((nazwa) => (
-          <Pozycja key={nazwa} nazwa={nazwa} />
-        ))}
-      </ol>
+      <header className="container py-4 py-lg-5">
+        <div className="row align-items-center g-3">
+          <div className="col-12 col-lg-8">
+            <h1 className="mb-2">Galeria zdjęć</h1>
+            <p className="lead text-body-secondary mb-0">
+              Zdjęcia z wypraw w góry, nad morze i po mieście. Wybierz kategorię,
+              żeby zawęzić widok — albo powiększ zdjęcie, które Ci się spodoba.
+            </p>
+          </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="pole">
-          <label htmlFor="imieNazwisko">Imię i nazwisko:</label>
-          <input
-            id="imieNazwisko"
-            type="text"
-            value={imieNazwisko}
-            onChange={(zdarzenie) => ustawImieNazwisko(zdarzenie.target.value)}
-          />
+          <div className="col-12 col-lg-4">
+            <div className="d-flex flex-wrap gap-2 justify-content-lg-end">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#panelFiltrow"
+              >
+                Filtry
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#dodajZdjecie"
+              >
+                Dodaj zdjęcie
+              </button>
+            </div>
+          </div>
         </div>
+      </header>
 
-        <div className="pole">
-          <label htmlFor="numerFilmu">Numer filmu:</label>
-          <input
-            id="numerFilmu"
-            type="number"
-            value={numerFilmu}
-            onChange={(zdarzenie) => ustawNumerFilmu(zdarzenie.target.value)}
-          />
-        </div>
+      <main className="container">
+        <CategoryBar aktywna={aktywnaKategoria} onWybierz={setAktywnaKategoria} />
 
-        <button type="submit">Zatwierdź wybór</button>
-      </form>
-    </main>
-  );
+        <p className="text-body-secondary">
+          Wyświetlono {widoczne.length} z {zdjecia.length} zdjęć
+        </p>
+
+        {widoczne.length === 0 && (
+          <div className="alert alert-warning">
+            Nie znaleziono zdjęć w tej kategorii.
+          </div>
+        )}
+
+        <Gallery
+          zdjecia={widoczne}
+          onUsun={usunZdjecie}
+          onPrzelacz={przelaczUlubione}
+        />
+      </main>
+
+      <Footer />
+
+      <AddPhotoModal onDodaj={dodajZdjecie} />
+      <FiltersOffcanvas aktywna={aktywnaKategoria} onWybierz={setAktywnaKategoria} />
+
+    </>
+  )
 }
 
-export default App;
+export default App
