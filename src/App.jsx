@@ -1,95 +1,131 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import {
+  Link,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
+import { wydarzenia } from './wydarzenia.js'
 
-function App() {
-  const [rowery, setRowery] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [szukaj, setSzukaj] = useState('')
+const MIASTA = [...new Set(wydarzenia.map((wydarzenie) => wydarzenie.miasto))]
 
-  useEffect(() => {
-    async function wczytaj() {
-      try {
-        const odpowiedz = await fetch('/rowery.json')
-        const dane = await odpowiedz.json()
-        setRowery(dane)
-      } catch (e) {
-        setError(e.message)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+function ListaWydarzenPage() {
+  const [aktywneMiasta, setAktywneMiasta] = useState(MIASTA)
 
-    wczytaj()
-  }, [])
+  function przelaczMiasto(miasto) {
+    setAktywneMiasta((aktywne) =>
+      aktywne.includes(miasto)
+        ? aktywne.filter((aktywneMiasto) => aktywneMiasto !== miasto)
+        : [...aktywne, miasto],
+    )
+  }
 
-  const widoczne = rowery.filter((rower) =>
-    rower.model.toLowerCase().includes(szukaj.toLowerCase()),
+  const widoczne = wydarzenia.filter((wydarzenie) =>
+    aktywneMiasta.includes(wydarzenie.miasto),
   )
-
-  function usun(id) {
-    setRowery((poprzednie) => poprzednie.filter((rower) => rower.id !== id))
-  }
-
-  if (isLoading) {
-    return (
-      <div className="container mt-4">
-        <div className="spinner-border" role="status" />
-        <span className="ms-2">Ładowanie...</span>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-danger">{error}</div>
-      </div>
-    )
-  }
-
-  if (rowery.length === 0) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-secondary">Brak rowerów</div>
-      </div>
-    )
-  }
 
   return (
     <div className="container mt-4">
-      <h1>Wypożyczalnia rowerów</h1>
-      <input
-        type="text"
-        className="form-control mb-3"
-        placeholder="Szukaj po modelu..."
-        value={szukaj}
-        onChange={(event) => setSzukaj(event.target.value)}
-      />
-      {widoczne.length === 0 && (
-        <div className="alert alert-secondary">Brak wyników</div>
-      )}
+      <h1>Wydarzenia i koncerty</h1>
+      <div className="d-flex flex-wrap gap-3 mb-3">
+        {MIASTA.map((miasto) => (
+          <div className="form-check form-switch" key={miasto}>
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              id={`miasto-${miasto}`}
+              checked={aktywneMiasta.includes(miasto)}
+              onChange={() => przelaczMiasto(miasto)}
+            />
+            <label className="form-check-label" htmlFor={`miasto-${miasto}`}>
+              {miasto}
+            </label>
+          </div>
+        ))}
+      </div>
       <div className="row g-3">
-        {widoczne.map((rower) => (
-          <div key={rower.id} className="col-12 col-md-6">
-            <div className={`card h-100${rower.dostepny ? '' : ' opacity-50'}`}>
+        {widoczne.map((wydarzenie) => (
+          <div key={wydarzenie.id} className="col-12 col-md-4">
+            <div className="card h-100">
               <div className="card-body">
-                <h2 className="card-title h5">{rower.model}</h2>
-                <span className="badge text-bg-secondary mb-3">{rower.typ}</span>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={() => usun(rower.id)}
-                  >
-                    Usuń
-                  </button>
-                </div>
+                <h2 className="card-title h5">{wydarzenie.nazwa}</h2>
+                <p className="text-body-secondary mb-2">
+                  {wydarzenie.miasto} — {wydarzenie.data}
+                </p>
+                <Link
+                  to={`/wydarzenie/${wydarzenie.id}`}
+                  className="btn btn-outline-primary btn-sm"
+                >
+                  Szczegóły
+                </Link>
               </div>
             </div>
           </div>
         ))}
       </div>
     </div>
+  )
+}
+
+function SzczegolyWydarzeniaPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const wydarzenie = wydarzenia.find((element) => element.id === Number(id))
+
+  if (!wydarzenie) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-warning">
+          Nie znaleziono wydarzenia o numerze {id}
+        </div>
+        <button
+          type="button"
+          className="btn btn-outline-secondary"
+          onClick={() => navigate(-1)}
+        >
+          Wstecz
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mt-4">
+      <h1>{wydarzenie.nazwa}</h1>
+      <p>Miasto: {wydarzenie.miasto}</p>
+      <p>Data: {wydarzenie.data}</p>
+      <p>
+        Cena: {wydarzenie.cena === 0 ? 'Wstęp wolny' : `${wydarzenie.cena} zł`}
+      </p>
+      <button
+        type="button"
+        className="btn btn-outline-secondary"
+        onClick={() => navigate(-1)}
+      >
+        Wstecz
+      </button>
+    </div>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <div className="container mt-4">
+      <h1>Nie ma takiej strony</h1>
+      <Link to="/">Wróć do listy</Link>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<ListaWydarzenPage />} />
+      <Route path="/wydarzenie/:id" element={<SzczegolyWydarzeniaPage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   )
 }
 
