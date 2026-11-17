@@ -1,131 +1,135 @@
-import { useState } from 'react'
-import {
-  Link,
-  Route,
-  Routes,
-  useNavigate,
-  useParams,
-} from 'react-router-dom'
-import { wydarzenia } from './wydarzenia.js'
+import { useRef, useState } from 'react'
+import { zdjeciaStartowe } from './zdjecia.js'
 
-const MIASTA = [...new Set(wydarzenia.map((wydarzenie) => wydarzenie.miasto))]
+const NAZWY_KATEGORII = {
+  1: 'Kwiaty',
+  2: 'Zwierzęta',
+  3: 'Samochody',
+}
+const KATEGORIE = [1, 2, 3]
 
-function ListaWydarzenPage() {
-  const [aktywneMiasta, setAktywneMiasta] = useState(MIASTA)
+function App() {
+  const [zdjecia, setZdjecia] = useState(zdjeciaStartowe)
+  const [aktywneKategorie, setAktywneKategorie] = useState(KATEGORIE)
+  const altRef = useRef(null)
+  const filenameRef = useRef(null)
+  const categoryRef = useRef(null)
 
-  function przelaczMiasto(miasto) {
-    setAktywneMiasta((aktywne) =>
-      aktywne.includes(miasto)
-        ? aktywne.filter((aktywneMiasto) => aktywneMiasto !== miasto)
-        : [...aktywne, miasto],
+  function przelaczKategorie(kategoria) {
+    setAktywneKategorie((aktywne) =>
+      aktywne.includes(kategoria)
+        ? aktywne.filter((element) => element !== kategoria)
+        : [...aktywne, kategoria],
     )
   }
 
-  const widoczne = wydarzenia.filter((wydarzenie) =>
-    aktywneMiasta.includes(wydarzenie.miasto),
+  function pobierz(id) {
+    setZdjecia((poprzednie) =>
+      poprzednie.map((zdjecie) =>
+        zdjecie.id === id
+          ? { ...zdjecie, downloads: zdjecie.downloads + 1 }
+          : zdjecie,
+      ),
+    )
+  }
+
+  function dodajZdjecie(event) {
+    event.preventDefault()
+    const noweId = Math.max(...zdjecia.map((zdjecie) => zdjecie.id)) + 1
+
+    setZdjecia((poprzednie) => [
+      ...poprzednie,
+      {
+        id: noweId,
+        alt: altRef.current.value,
+        filename: filenameRef.current.value,
+        category: Number(categoryRef.current.value),
+        downloads: 0,
+      },
+    ])
+    event.target.reset()
+  }
+
+  const widoczne = zdjecia.filter((zdjecie) =>
+    aktywneKategorie.includes(zdjecie.category),
   )
 
   return (
     <div className="container mt-4">
-      <h1>Wydarzenia i koncerty</h1>
+      <h1>Kategorie zdjęć</h1>
       <div className="d-flex flex-wrap gap-3 mb-3">
-        {MIASTA.map((miasto) => (
-          <div className="form-check form-switch" key={miasto}>
+        {KATEGORIE.map((kategoria) => (
+          <div className="form-check form-switch" key={kategoria}>
             <input
               className="form-check-input"
               type="checkbox"
               role="switch"
-              id={`miasto-${miasto}`}
-              checked={aktywneMiasta.includes(miasto)}
-              onChange={() => przelaczMiasto(miasto)}
+              id={`kategoria-${kategoria}`}
+              checked={aktywneKategorie.includes(kategoria)}
+              onChange={() => przelaczKategorie(kategoria)}
             />
-            <label className="form-check-label" htmlFor={`miasto-${miasto}`}>
-              {miasto}
+            <label className="form-check-label" htmlFor={`kategoria-${kategoria}`}>
+              {NAZWY_KATEGORII[kategoria]}
             </label>
           </div>
         ))}
       </div>
+
       <div className="row g-3">
-        {widoczne.map((wydarzenie) => (
-          <div key={wydarzenie.id} className="col-12 col-md-4">
-            <div className="card h-100">
-              <div className="card-body">
-                <h2 className="card-title h5">{wydarzenie.nazwa}</h2>
-                <p className="text-body-secondary mb-2">
-                  {wydarzenie.miasto} — {wydarzenie.data}
-                </p>
-                <Link
-                  to={`/wydarzenie/${wydarzenie.id}`}
-                  className="btn btn-outline-primary btn-sm"
-                >
-                  Szczegóły
-                </Link>
-              </div>
-            </div>
+        {widoczne.map((zdjecie) => (
+          <div key={zdjecie.id} className="col-12 col-sm-6 col-md-4">
+            <img
+              src={zdjecie.filename}
+              alt={zdjecie.alt}
+              className="img-fluid rounded"
+            />
+            <h2 className="h6 mt-2">Pobrań: {zdjecie.downloads}</h2>
+            <button
+              type="button"
+              className="btn btn-success btn-sm"
+              onClick={() => pobierz(zdjecie.id)}
+            >
+              Pobierz
+            </button>
           </div>
         ))}
       </div>
-    </div>
-  )
-}
 
-function SzczegolyWydarzeniaPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const wydarzenie = wydarzenia.find((element) => element.id === Number(id))
-
-  if (!wydarzenie) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-warning">
-          Nie znaleziono wydarzenia o numerze {id}
+      <hr className="my-4" />
+      <h2 className="h4">Dodaj zdjęcie</h2>
+      <form onSubmit={dodajZdjecie} className="row g-3">
+        <div className="col-md-6">
+          <label htmlFor="alt" className="form-label">Opis zdjęcia (alt)</label>
+          <input id="alt" ref={altRef} className="form-control" required />
         </div>
-        <button
-          type="button"
-          className="btn btn-outline-secondary"
-          onClick={() => navigate(-1)}
-        >
-          Wstecz
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="container mt-4">
-      <h1>{wydarzenie.nazwa}</h1>
-      <p>Miasto: {wydarzenie.miasto}</p>
-      <p>Data: {wydarzenie.data}</p>
-      <p>
-        Cena: {wydarzenie.cena === 0 ? 'Wstęp wolny' : `${wydarzenie.cena} zł`}
-      </p>
-      <button
-        type="button"
-        className="btn btn-outline-secondary"
-        onClick={() => navigate(-1)}
-      >
-        Wstecz
-      </button>
+        <div className="col-md-6">
+          <label htmlFor="kategoria" className="form-label">Kategoria</label>
+          <select
+            id="kategoria"
+            ref={categoryRef}
+            className="form-select"
+            defaultValue="1"
+          >
+            <option value="1">Kwiaty</option>
+            <option value="2">Zwierzęta</option>
+            <option value="3">Samochody</option>
+          </select>
+        </div>
+        <div className="col-12">
+          <label htmlFor="filename" className="form-label">Adres URL zdjęcia</label>
+          <input
+            id="filename"
+            ref={filenameRef}
+            className="form-control"
+            placeholder="https://..."
+            required
+          />
+        </div>
+        <div className="col-12">
+          <button type="submit" className="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
     </div>
-  )
-}
-
-function NotFoundPage() {
-  return (
-    <div className="container mt-4">
-      <h1>Nie ma takiej strony</h1>
-      <Link to="/">Wróć do listy</Link>
-    </div>
-  )
-}
-
-function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<ListaWydarzenPage />} />
-      <Route path="/wydarzenie/:id" element={<SzczegolyWydarzeniaPage />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
   )
 }
 
